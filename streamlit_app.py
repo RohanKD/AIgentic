@@ -1,191 +1,127 @@
 import streamlit as st
 import time
 
-# Optional: Set page layout and initial configurations
+# Set page configuration as the first Streamlit command
 st.set_page_config(
-    page_title="Sports & Music Performance Analyzer",
+    page_title="Activity Performance Analyzer",
     layout="wide",
 )
 
+# Optional: Add some custom CSS for improved styling
+st.markdown(
+    """
+    <style>
+    .stButton>button {
+        background-color: #4CAF50;
+        color: white;
+        font-weight: bold;
+    }
+    .header {
+        font-size: 2.5em;
+        font-weight: bold;
+        margin-bottom: 0.5em;
+    }
+    .subheader {
+        font-size: 1.5em;
+        margin-top: 1em;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
 def main():
-    st.title("Performance Analyzer for Sports and Music")
+    st.markdown("<div class='header'>Activity Performance Analyzer</div>", unsafe_allow_html=True)
     st.write(
-        "Upload a video of your sports performance or music practice, "
-        "and receive personalized feedback on technique and form."
+        "Upload a video of your performance in any activity, and receive personalized feedback on your technique and form."
     )
+    st.markdown("---")
+    show_activity_analysis_ui()
 
-    # Create two tabs: one for sports, one for music
-    sports_tab, music_tab = st.tabs(["Sports", "Music"])
-
-    with sports_tab:
-        show_sports_analysis_ui()
-
-    with music_tab:
-        show_music_analysis_ui()
-
-
-def show_sports_analysis_ui():
-    st.header("Sports Performance Analysis")
-
-    # Let the user pick from a dropdown OR type in a sport
-    st.subheader("1. Select or Enter Your Sport")
-    sport_options = ["Tennis", "Badminton", "Swimming", "Weightlifting", "Other"]
-    chosen_sport = st.selectbox("Sport:", sport_options, index=0)
+def show_activity_analysis_ui():
+    st.markdown("<div class='subheader'>Step 1: Select or Enter Your Activity</div>", unsafe_allow_html=True)
+    activity_options = ["Sports", "Music", "Dance", "Theater", "Other"]
+    chosen_activity = st.selectbox("Activity Type:", activity_options)
     
-    # If user picks "Other," show a text input
-    if chosen_sport == "Other":
-        custom_sport = st.text_input("Enter your sport:")
-        if custom_sport:
-            chosen_sport = custom_sport  # override
+    if chosen_activity == "Other":
+        custom_activity = st.text_input("Enter your activity:")
+        if custom_activity:
+            chosen_activity = custom_activity
 
-    # File uploader
-    st.subheader("2. Upload Your Sports Video")
-    uploaded_file_sport = st.file_uploader(
-        f"Upload a short clip of your {chosen_sport} performance",
-        type=["mp4", "mov", "avi", "mkv"],
-        key="sports_upload"
+    st.markdown("---")
+    st.markdown("<div class='subheader'>Step 2: Upload Your Performance Video</div>", unsafe_allow_html=True)
+    uploaded_file = st.file_uploader(
+        f"Upload a short clip of your {chosen_activity} performance",
+        type=["mp4", "mov", "avi", "mkv"]
     )
 
-    if uploaded_file_sport:
-        st.video(uploaded_file_sport)
+    if uploaded_file:
+        st.video(uploaded_file)
 
-    # Analyze button
-    if st.button("Analyze Sports Performance", key="sports_analyze"):
-        if not uploaded_file_sport:
-            st.warning("Please upload a sports video before analyzing.")
+    st.markdown("---")
+    if st.button("Analyze Performance"):
+        if not uploaded_file:
+            st.warning("Please upload a video before analyzing.")
         else:
-            with st.spinner("Analyzing sports performance..."):
-                time.sleep(3)  # Simulate processing
+            with st.spinner("Analyzing performance..."):
+                time.sleep(3)  # Simulate processing time
 
-                # Placeholder results
-                sports_analysis = {
-                    "activity": chosen_sport,
-                    "overall_score": 85,
+                # Placeholder analysis results
+                analysis_results = {
+                    "activity": chosen_activity,
+                    "overall_score": 88,
                     "main_issues": [
-                        {"label": "Footwork", "description": "Feet too close together during pivot."},
-                        {"label": "Shoulder Rotation", "description": "Limited rotation reducing power."}
+                        {"label": "Technique", "description": "Minor inconsistencies in movement execution."},
+                        {"label": "Timing", "description": "Slight delays in transition phases."}
                     ],
                     "recommendations": [
-                        "Keep your feet a bit wider for better balance.",
-                        "Focus on rotating your shoulders more on the follow-through."
+                        "Focus on maintaining consistency throughout your performance.",
+                        "Work on smoother transitions between segments."
                     ],
                     "reference_clips": [
                         {
-                            "title": "Pro Example: Ideal Footwork",
-                            "url": "https://youtu.be/dummy-footwork"
+                            "title": "Technique Mastery Example",
+                            "url": "https://youtu.be/dummy-technique"
                         },
                         {
-                            "title": "Increasing Shoulder Rotation",
-                            "url": "https://youtu.be/dummy-shoulders"
+                            "title": "Timing and Rhythm Guidance",
+                            "url": "https://youtu.be/dummy-timing"
                         }
                     ]
                 }
-
-            st.success("Sports analysis complete!")
-            display_analysis_results(sports_analysis)
-
-
-def show_music_analysis_ui():
-    st.header("Music Performance Analysis")
-
-    # Let the user pick from a dropdown or type in an instrument/activity
-    st.subheader("1. Select or Enter Your Instrument")
-    instrument_options = ["Guitar", "Piano", "Violin", "Drums", "Other"]
-    chosen_instrument = st.selectbox("Instrument:", instrument_options, index=0)
-
-    # If user picks "Other," show a text input
-    if chosen_instrument == "Other":
-        custom_instrument = st.text_input("Enter your instrument:")
-        if custom_instrument:
-            chosen_instrument = custom_instrument  # override
-
-    st.subheader("2. Upload Your Music Performance Video")
-    uploaded_file_music = st.file_uploader(
-        f"Upload a short clip of your {chosen_instrument} performance",
-        type=["mp4", "mov", "avi", "mkv"],
-        key="music_upload"
-    )
-
-    if uploaded_file_music:
-        st.video(uploaded_file_music)
-
-    # Analyze button
-    if st.button("Analyze Music Performance", key="music_analyze"):
-        if not uploaded_file_music:
-            st.warning("Please upload a music performance video before analyzing.")
-        else:
-            with st.spinner("Analyzing music performance..."):
-                time.sleep(3)  # Simulate processing
-
-                # Placeholder results
-                music_analysis = {
-                    "activity": chosen_instrument,
-                    "overall_score": 90,
-                    "main_issues": [
-                        {"label": "Posture", "description": "Back is slouched while seated."},
-                        {"label": "Hand Position", "description": "Wrist too bent, causing tension."}
-                    ],
-                    "recommendations": [
-                        "Keep your back straight and relaxed for better breathing/control.",
-                        "Try maintaining a neutral wrist angle to reduce strain."
-                    ],
-                    "reference_clips": [
-                        {
-                            "title": "Proper Seated Posture",
-                            "url": "https://youtu.be/dummy-posture"
-                        },
-                        {
-                            "title": "Correct Wrist Technique",
-                            "url": "https://youtu.be/dummy-wrist"
-                        }
-                    ]
-                }
-
-            st.success("Music analysis complete!")
-            display_analysis_results(music_analysis)
-
+            st.success("Analysis complete!")
+            display_analysis_results(analysis_results)
 
 def display_analysis_results(results):
-    """
-    Displays analysis results in a user-friendly format.
-    This function is reused for both sports and music tabs.
-    """
-    st.subheader("Analysis Results")
-
-    activity_name = results.get("activity", "your activity")
+    st.markdown("<div class='subheader'>Analysis Results</div>", unsafe_allow_html=True)
+    activity_name = results.get("activity", "Your activity")
     overall_score = results.get("overall_score", None)
     main_issues = results.get("main_issues", [])
     recommendations = results.get("recommendations", [])
     reference_clips = results.get("reference_clips", [])
 
-    # Show the activity
     st.write(f"**Activity Analyzed:** {activity_name}")
 
-    # Show overall score
     if overall_score is not None:
-        st.metric(label="Overall Form Score", value=f"{overall_score}/100")
+        st.metric(label="Overall Performance Score", value=f"{overall_score}/100")
 
-    # Show key issues
     if main_issues:
-        st.write("### Key Issues Found:")
+        st.write("### Key Issues Identified:")
         for issue in main_issues:
             st.markdown(f"- **{issue['label']}**: {issue['description']}")
 
-    # Show recommendations
     if recommendations:
         st.write("### Recommendations:")
         for rec in recommendations:
             st.markdown(f"- {rec}")
 
-    # Show reference clips
     if reference_clips:
-        st.write("### Suggested Reference Clips:")
+        st.write("### Reference Clips:")
         for clip in reference_clips:
             st.markdown(f"- **{clip['title']}**: [Watch here]({clip['url']})")
 
-    st.write("---")
-    st.write("Feel free to upload another video to track improvements!")
-
+    st.markdown("---")
+    st.write("Feel free to upload another video to track your progress!")
 
 if __name__ == "__main__":
     main()
