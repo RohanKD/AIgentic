@@ -2,27 +2,26 @@ import streamlit as st
 import yt_dlp
 import os
 import time
-import requests
-from bs4 import BeautifulSoup
 
 def scrape_youtube_search(query, max_results=25):
-    search_query = f"How to {query}".replace(" ", "+")
-    url = f"https://www.youtube.com/results?search_query={search_query}"
-    response = requests.get(url)
-    soup = BeautifulSoup(response.text, "html.parser")
-    video_ids = [
-        link["href"].split("=", 1)[1] for link in soup.select("a[href^='/watch?v=']")
-    ]
-    video_urls = [f"https://www.youtube.com/watch?v={vid}" for vid in video_ids[:max_results]]
-    return video_urls
+    # Use yt_dlp's internal search feature
+    search_query = f"ytsearch{max_results}:{query}"
+    with yt_dlp.YoutubeDL({'quiet': True}) as ydl:
+        try: 
+            search_result = ydl.extract_info(search_query, download=False)
+            video_urls = [entry['webpage_url'] for entry in search_result['entries']]
+            return video_urls
+        except Exception as e:
+            st.error(f"Error searching YouTube: {e}")
+            return []
 
 def download_video(url, output_dir="videos"):
     os.makedirs(output_dir, exist_ok=True)
     ydl_opts = {
-        "format": "bv*[height<=240]+ba/bv*+ba/b",  # Best video + best audio, fallback to best
-        "outtmpl": f"{output_dir}/%(title)s.%(ext)s",  # Save in "videos" folder
-        "merge_output_format": "mp4",  # Ensure consistent output
-        "quiet": False,  # Show progress
+        "format": "bv*[height<=240]+ba/bv*+ba/b",
+        "outtmpl": f"{output_dir}/%(title)s.%(ext)s",
+        "merge_output_format": "mp4",
+        "quiet": False,
         "postprocessors": [
             {"key": "FFmpegVideoConvertor", "preferedformat": "mp4"},
         ],
@@ -31,19 +30,7 @@ def download_video(url, output_dir="videos"):
         try:
             ydl.download([url])
         except yt_dlp.utils.DownloadError as e:
-            print(f"❌ Error downloading {url}: {e}")
-
-def main():
-    st.set_page_config(page_title="Activity Performance Analyzer", layout="wide")
-    st.title("Performance Analyzer & How-To Video Finder")
-    st.write("Upload a video for performance analysis or search for how-to videos.")
-    
-    activity_tab, howto_tab = st.tabs(["Activity Analysis", "How-To Videos"])
-    
-    with activity_tab:
-        show_activity_analysis_ui()
-    with howto_tab:
-        show_howto_ui()
+            st.error(f"❌ Error downloading {url}: {e}")
 
 def show_activity_analysis_ui():
     st.header("Activity Performance Analysis")
@@ -65,15 +52,34 @@ def show_activity_analysis_ui():
 def show_howto_ui():
     st.header("Find How-To Videos")
     user_query = st.text_input("Enter the task you want to learn:")
-    if st.button("Search and Download How-To Videos"):
+    if st.button("Search How-To Videos"):
         if user_query:
             with st.spinner("Searching YouTube..."):
                 video_links = scrape_youtube_search(user_query)
-            st.write("### Downloading videos...")
+            st.write("### Found Videos:")
             for link in video_links:
-                download_video(link)
-                st.write(f"✅ Downloaded: {link}")
+                st.write(link)
+            st.session_state["video_links"] = video_links
+            st.session_state["download_ready"] = True
+
+    if st.session_state.get("download_ready", False):
+        if st.button("Download Videos"):
+            with st.spinner("Downloading videos..."):
+                for link in st.session_state["video_links"]:
+                    download_video(link)
             st.success("All videos downloaded successfully (or skipped if unavailable).")
+
+def main():
+    st.set_page_config(page_title="Activity Performance Analyzer", layout="wide")
+    st.title("Performance Analyzer & How-To Video Finder")
+    st.write("Upload a video for performance analysis or search for how-to videos.")
+
+    activity_tab, howto_tab = st.tabs(["Activity Analysis", "How-To Videos"])
+
+    with activity_tab:
+        show_activity_analysis_ui()
+    with howto_tab:
+        show_howto_ui()
 
 if __name__ == "__main__":
     main()
