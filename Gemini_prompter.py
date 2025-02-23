@@ -8,17 +8,11 @@ from VideoRag.videorag._llm import *
 from VideoRag.videorag import VideoRag, QueryParam
 
 def generate_coaching_prompt_anthropic(activity, accommodations=""):
-    """
-    Generates a coaching prompt using Anthropics' Claude Haiku.
-    This function only takes in the activity and accommodations.
-    """
-    # Build the prompt for Claude Haiku.
     prompt = f"Create a coaching prompt for the activity: {activity}."
     if accommodations:
         prompt += f" Consider the following accommodations: {accommodations}."
     prompt += " Provide a concise, clear coaching prompt."
 
-    # Initialize the Anthropic client using your API key.
     anthropic_api_key = ""
     if not anthropic_api_key:
         raise ValueError("ANTHROPIC_API_KEY environment variable not set.")
@@ -26,7 +20,6 @@ def generate_coaching_prompt_anthropic(activity, accommodations=""):
     client = Anthropic(api_key=anthropic_api_key)
 
     try:
-        # Updated message creation for Anthropics
         message = client.messages.create(
             model="claude-3-haiku-20240307",
             max_tokens=1024,
@@ -46,8 +39,6 @@ def generate_coaching_prompt_anthropic(activity, accommodations=""):
         return fallback_prompt, "helpful and direct"
     
 def generate_coaching_prompt(model, activity, additional_info="", anthropic_prompt=""):
-    
-    # Combine the Anthropics prompt with any additional info.
     combined_info = ""
     if anthropic_prompt:
         combined_info += f"Anthropic guidance: {anthropic_prompt}"
@@ -69,7 +60,6 @@ def generate_coaching_prompt(model, activity, additional_info="", anthropic_prom
             generation_config=genai.GenerationConfig(temperature=0.7, max_output_tokens=1024)
         )
         generated_text = response.text
-        # Placeholder parsing logic; adjust as needed.
         generated_prompt = generated_text
         coaching_tone = "helpful and direct"
         return generated_prompt, coaching_tone
@@ -81,7 +71,6 @@ def generate_coaching_prompt(model, activity, additional_info="", anthropic_prom
         return fallback_prompt, "helpful and direct"
 
 def gemini_flash(model, instructional_videos, user_video, prompt, coaching_tone):
-    """Processes videos with Gemini 2.0 Flash for coaching feedback."""
     try:
         video_paths = []
         contents = [prompt, coaching_tone]
@@ -118,7 +107,7 @@ def main():
     args = parser.parse_args()
 
     genai.configure(api_key=os.environ["GOOGLE_API_KEY"])
-    model = genai.GenerativeModel("gemini-2.0-flash") # or gemini-1.5-pro, or gemini-pro-vision depending on your needs.
+    model = genai.GenerativeModel("gemini-2.0-flash")
 
     instructional_videos = [
         os.path.join(args.instructional_dir, f)
@@ -126,9 +115,7 @@ def main():
         if f.lower().endswith(('.mp4', '.avi', '.mov', '.mkv'))
     ]
     
-    # Generate a prompt using Anthropics
     anthropic_prompt, anthropic_tone = generate_coaching_prompt_anthropic(args.activity, args.additional_info)
-    # Use the Anthropics prompt as guidance when generating the Gemini coaching prompt.
     prompt, coaching_tone = generate_coaching_prompt(model, args.activity, additional_info=args.additional_info, anthropic_prompt=anthropic_prompt)
     
     feedback = gemini_flash(model, instructional_videos, args.user_video, prompt, coaching_tone)
