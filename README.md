@@ -1,10 +1,8 @@
-# 🎈 Blank app template
+To use our tool, you will need to use VideoRAG.
+Please follow these installation instructions: https://github.com/HKUDS/VideoRAG 
+Then use the 4 files found in the VideoragNew folder in this repo to replace the corresponding files in VideoRAG
 
-A simple Streamlit app template for you to modify!
-
-[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://blank-app-template.streamlit.app/)
-
-### How to run it on your own machine
+You can also run our streamlit app using the following commands
 
 1. Install the requirements
 
