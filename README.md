@@ -15,3 +15,4 @@ You can also run our streamlit app using the following commands
    ```
    $ streamlit run streamlit_app.py
    ```
+Link to devpost: https://devpost.com/software/adept
