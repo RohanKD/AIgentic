@@ -10,3 +10,6 @@ ctranslate2==4.4.0 faster_whisper==1.0.3 neo4j hnswlib xxhash nano-vectordb
 transformers==4.37.1
 tiktoken openai tenacity
 dotenv
+beautifulsoup4
+requests
+yt_dlp
