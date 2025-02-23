@@ -1,126 +1,102 @@
 import os
-import argparse
-from google import genai
-from google.genai import types
-from PIL import Image
+import google.generativeai as genai
+from anthropic import Anthropic
 
-# Set your API key
-os.environ["GOOGLE_API_KEY"] = "your_api_key_here"
 
-def generate_coaching_prompt(client, activity, additional_info=""):
+def generate_coaching_prompt_anthropic(activity, accommodations=""):
     """
-    Generates a coaching prompt and determines the coaching tone
-    based on the activity and any additional information provided.
-
-    Args:
-        client (genai.Client): The initialized GenAI client.
-        activity (str): The name of the activity (e.g., "worm dance", "squat").
-        additional_info (str, optional): Additional user information. Defaults to "".
-
-    Returns:
-        tuple: A tuple containing the generated prompt (str) and coaching tone (str).
+    Generates a coaching prompt using Anthropics' Claude Haiku.
+    This function only takes in the activity and accommodations.
     """
-    prompt = (
-        f"Create a coaching prompt for the activity: {activity}."
-        f" Additional information: {additional_info}."
-        " Provide the prompt and suggest an appropriate coaching tone."
+    # Build the prompt for Claude Haiku.
+    prompt = f"Create a coaching prompt for the activity: {activity}."
+    if accommodations:
+        prompt += f" Consider the following accommodations: {accommodations}."
+    prompt += " Provide a concise, clear coaching prompt."
+
+    # Initialize the Anthropics client using your API key.
+    client = Anthropic(
+        api_key=""
     )
 
     try:
-        response = client.models.generate_content(
-            model="gemini-2.0-flash",
-            contents=[prompt],
+        # Updated message creation for Anthropic
+        message = client.messages.create(
+            model="claude-3-haiku-20240307",
+            max_tokens=1024,
             temperature=0.7,
-            max_output_tokens=1024
+            messages=[
+                {"role": "user", "content": prompt}
+            ]
         )
-        generated_text = response.result
-        # Placeholder parsing logic
-        generated_prompt = generated_text
+        generated_prompt = message.content[0].text
         coaching_tone = "helpful and direct"
+        print(generated_prompt)
         return generated_prompt, coaching_tone
-
     except Exception as e:
-        print(f"Error generating coaching prompt: {e}")
+        print(f"Error generating coaching prompt with Anthropics: {e}")
         fallback_prompt = f"Analyze my {activity} and provide feedback that is helpful and direct."
-        if additional_info:
-            fallback_prompt += f" Consider the following: {additional_info}"
+        if accommodations:
+            fallback_prompt += f" Consider the following: {accommodations}"
         return fallback_prompt, "helpful and direct"
 
-def gemini_flash(client, instructional_videos, user_video, prompt, coaching_tone):
-    """
-    Processes instructional videos and a user video with Gemini 2.0 Flash
-    to provide personalized coaching feedback.
 
-    Args:
-        client (genai.Client): The initialized GenAI client.
-        instructional_videos (list): Paths to instructional video files.
-        user_video (str): Path to the user's video file.
-        prompt (str): The coaching prompt.
-        coaching_tone (str): The desired coaching tone.
-
-    Returns:
-        str: Generated coaching feedback.
-    """
+def gemini_flash(model, instructional_videos, user_video, prompt, coaching_tone):
+    """Processes videos with Gemini 2.0 Flash for coaching feedback."""
     try:
+        # Upload files using the File API
         contents = [prompt, coaching_tone]
-        for video_path in instructional_videos + [user_video]:
-            with open(video_path, 'rb') as video_file:
-                contents.append(video_file.read())
 
-        response = client.models.generate_content(
-            model="gemini-2.0-flash",
+        # Upload and process instructional videos
+        for video_path in instructional_videos:
+            video_file = genai.upload_file(video_path)
+            contents.append(video_file)
+
+        # Upload and process user video
+        user_video_file = genai.upload_file(user_video)
+        contents.append(user_video_file)
+
+        response = model.generate_content(
             contents=contents,
-            temperature=0.7,
-            max_output_tokens=1024
+            generation_config=genai.GenerationConfig(
+                temperature=0.7,
+                max_output_tokens=1024
+            )
         )
-        feedback = response.result
+        feedback = response.text
         return feedback
-
     except Exception as e:
         print(f"Error processing videos with Gemini 2.0 Flash: {e}")
         return "An error occurred while processing the videos. Please try again later."
 
+
 def main():
-    parser = argparse.ArgumentParser(
-        description="Process instructional videos and a user video with Gemini 2.0 Flash to provide personalized coaching feedback."
-    )
-    parser.add_argument(
-        "--instructional-dir",
-        required=True,
-        help="Directory containing instructional video files (e.g., .mp4, .avi, .mov, .mkv)"
-    )
-    parser.add_argument(
-        "--user-video",
-        required=True,
-        help="Path to the user's video file to analyze."
-    )
-    parser.add_argument(
-        "--activity",
-        required=True,
-        help="The name of the activity/exercise (e.g., 'worm dance', 'squat')."
-    )
-    parser.add_argument(
-        "--additional-info",
-        default="",
-        help="Optional additional information (e.g., 'I have knee problems', 'I'm a beginner')."
-    )
+    # Instead of command line arguments, prompt the user for input.
+    instructional_dir = "/Users/rohan/PycharmProjects/DoAI/VideoRAG/videos"
+    user_video = "/Users/rohan/Downloads/20250222_205205.mp4"
+    activity = "Self defense"
+    accommodations = "Torn ACL"
 
-    args = parser.parse_args()
+    # Configure the Gemini model
+    genai.configure(api_key="")
+    model = genai.GenerativeModel("gemini-2.0-flash")  # Changed to pro-vision model
 
+    # Get list of instructional videos
     instructional_videos = [
-        os.path.join(args.instructional-dir, f)
-        for f in os.listdir(args.instructional-dir)
+        os.path.join(instructional_dir, f)
+        for f in os.listdir(instructional_dir)
         if f.lower().endswith(('.mp4', '.avi', '.mov', '.mkv'))
     ]
 
-    client = genai.Client(api_key=os.environ["GOOGLE_API_KEY"])
+    # Generate the coaching prompt using Anthropics' Claude Haiku.
+    prompt, coaching_tone = generate_coaching_prompt_anthropic(activity, accommodations)
 
-    prompt, coaching_tone = generate_coaching_prompt(client, args.activity, args.additional_info)
+    # Send the generated prompt and videos to Gemini for coaching feedback.
+    feedback = gemini_flash(model, instructional_videos, user_video, prompt, coaching_tone)
 
-    feedback = gemini_flash(client, instructional_videos, args.user_video, prompt, coaching_tone)
-
-    print("Coaching feedback from Gemini 2.0 Flash:")
+    print("Coaching feedback from Gemini:")
     print(feedback)
+
 
 if __name__ == "__main__":
     main()
