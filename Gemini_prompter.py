@@ -1,78 +1,84 @@
 import os
 import argparse
-import requests
+from google import genai
+from google.genai import types
+from PIL import Image
 
-# Replace with your actual Gemini API credentials and endpoint.
-GEMINI_API_URL = "https://api.gemini.com/v2/generate_coaching_prompt"  # Placeholder URL
-GEMINI_API_KEY = "your_api_key_here"  # Replace with your actual API key
+# Set your API key
+os.environ["GOOGLE_API_KEY"] = "your_api_key_here"
 
-def generate_coaching_prompt(activity, additional_info=""):
+def generate_coaching_prompt(client, activity, additional_info=""):
     """
-    Calls the Gemini API to generate a coaching prompt and determine the coaching tone
-    based on the activity and any additional information provided by the user.
+    Generates a coaching prompt and determines the coaching tone
+    based on the activity and any additional information provided.
 
     Args:
-        activity (str): The name of the activity (e.g., "worm dance", "squat", "pushup").
-        additional_info (str, optional): Additional user information 
-            (e.g., "I have knee problems", "I'm a beginner"). Defaults to "".
+        client (genai.Client): The initialized GenAI client.
+        activity (str): The name of the activity (e.g., "worm dance", "squat").
+        additional_info (str, optional): Additional user information. Defaults to "".
 
     Returns:
         tuple: A tuple containing the generated prompt (str) and coaching tone (str).
     """
-    payload = {
-        "activity": activity,
-        "additional_info": additional_info,
-        "task": "generate_coaching_prompt"
-    }
-    headers = {
-        "Authorization": f"Bearer {GEMINI_API_KEY}",
-        "Content-Type": "application/json"
-    }
-    
-    try:
-        response = requests.post(GEMINI_API_URL, json=payload, headers=headers)
-        response.raise_for_status()
-        data = response.json()
-        prompt = data.get("prompt")
-        tone = data.get("tone")
-        if not prompt or not tone:
-            raise ValueError("Incomplete response from Gemini API.")
-        return prompt, tone
-    except Exception as e:
-        print(f"Error calling Gemini API: {e}")
-        # Fallback to default behavior if API call fails
-        tone = "helpful and direct"
-        prompt = f"Analyze my {activity} and provide feedback that is {tone}."
-        if additional_info:
-            prompt += f" Consider the following: {additional_info}"
-        return prompt, tone
+    prompt = (
+        f"Create a coaching prompt for the activity: {activity}."
+        f" Additional information: {additional_info}."
+        " Provide the prompt and suggest an appropriate coaching tone."
+    )
 
-def gemini_flash(instructional_videos, user_video, prompt, coaching_tone):
+    try:
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=[prompt],
+            temperature=0.7,
+            max_output_tokens=1024
+        )
+        generated_text = response.result
+        # Placeholder parsing logic
+        generated_prompt = generated_text
+        coaching_tone = "helpful and direct"
+        return generated_prompt, coaching_tone
+
+    except Exception as e:
+        print(f"Error generating coaching prompt: {e}")
+        fallback_prompt = f"Analyze my {activity} and provide feedback that is helpful and direct."
+        if additional_info:
+            fallback_prompt += f" Consider the following: {additional_info}"
+        return fallback_prompt, "helpful and direct"
+
+def gemini_flash(client, instructional_videos, user_video, prompt, coaching_tone):
     """
-    Simulates the Gemini 2.0 Flash processing. It receives a list of instructional videos,
-    a user video, a prompt, and the coaching tone, then uses them to generate personalized feedback.
+    Processes instructional videos and a user video with Gemini 2.0 Flash
+    to provide personalized coaching feedback.
 
     Args:
-        instructional_videos (list): A list of paths to instructional video files.
-        user_video (str): The path to the user's video file.
-        prompt (str): A general prompt that guides the coaching feedback.
+        client (genai.Client): The initialized GenAI client.
+        instructional_videos (list): Paths to instructional video files.
+        user_video (str): Path to the user's video file.
+        prompt (str): The coaching prompt.
         coaching_tone (str): The desired coaching tone.
 
     Returns:
-        str: A string containing the generated coaching feedback.
+        str: Generated coaching feedback.
     """
-    # This is a placeholder for your actual Gemini integration.
-    feedback = f"""Okay, I've reviewed the instructional videos and your attempt! Here's some feedback to help you improve, keeping in mind you wanted a {coaching_tone} approach.
+    try:
+        contents = [prompt, coaching_tone]
+        for video_path in instructional_videos + [user_video]:
+            with open(video_path, 'rb') as video_file:
+                contents.append(video_file.read())
 
-(This feedback is placeholder. Replace with Gemini analysis of the videos.)
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=contents,
+            temperature=0.7,
+            max_output_tokens=1024
+        )
+        feedback = response.result
+        return feedback
 
-* **Based on the instructional videos**, I'd recommend focusing on [Specific technique from instructional videos].
-* **Compared to your video**, it looks like [Specific aspect] could use some attention. Perhaps try [Specific suggestion].
-* **Another tip:** Consider [Additional suggestion].
-
-Remember, practice makes perfect! Keep at it, and you'll see improvement.
-"""
-    return feedback
+    except Exception as e:
+        print(f"Error processing videos with Gemini 2.0 Flash: {e}")
+        return "An error occurred while processing the videos. Please try again later."
 
 def main():
     parser = argparse.ArgumentParser(
@@ -98,25 +104,23 @@ def main():
         default="",
         help="Optional additional information (e.g., 'I have knee problems', 'I'm a beginner')."
     )
-    
+
     args = parser.parse_args()
-    
-    # Collect instructional video files from the specified directory.
+
     instructional_videos = [
-        os.path.join(args.instructional_dir, f)
-        for f in os.listdir(args.instructional_dir)
+        os.path.join(args.instructional-dir, f)
+        for f in os.listdir(args.instructional-dir)
         if f.lower().endswith(('.mp4', '.avi', '.mov', '.mkv'))
     ]
-    
-    # Generate the prompt and coaching tone by calling the Gemini API.
-    prompt, coaching_tone = generate_coaching_prompt(args.activity, args.additional_info)
-    
-    # Call the Gemini 2.0 Flash process with the videos, user video, prompt, and coaching tone.
-    response = gemini_flash(instructional_videos, args.user_video, prompt, coaching_tone)
-    
-    # Print the coaching feedback.
+
+    client = genai.Client(api_key=os.environ["GOOGLE_API_KEY"])
+
+    prompt, coaching_tone = generate_coaching_prompt(client, args.activity, args.additional_info)
+
+    feedback = gemini_flash(client, instructional_videos, args.user_video, prompt, coaching_tone)
+
     print("Coaching feedback from Gemini 2.0 Flash:")
-    print(response)
+    print(feedback)
 
 if __name__ == "__main__":
     main()
